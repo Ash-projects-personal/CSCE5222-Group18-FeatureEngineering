@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+data/*.zip
+data/ETTh1.csv
+*.log
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+report/*.aux
+report/*.log
