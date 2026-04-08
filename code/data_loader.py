@@ -1,16 +1,41 @@
-# data_loader.py  — first attempt at loading UCR datasets
-# TODO: forgot to import os, DATA_DIR not defined yet
+# data_loader.py  — fixed: added missing imports and DATA_DIR definition
+import os
+import numpy as np
+from sklearn.preprocessing import LabelEncoder
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
 
 def load_ucr_dataset(name):
-    path = DATA_DIR + "/" + name   # NameError: DATA_DIR not defined
-    files = os.listdir(path)       # NameError: os not imported
+    """Load a UCR dataset by name from the local data directory."""
+    path = os.path.join(DATA_DIR, name)
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+    files = [f for f in os.listdir(path) if f.endswith('.ts')]
     return files
 
 def parse_ts_file(filepath):
+    """Parse a .ts file from the UCR archive format."""
     X, y = [], []
-    with open(filepath) as f:
+    with open(filepath, 'r') as f:
+        in_data = False
         for line in f:
-            parts = line.strip().split(',')
-            X.append(parts[:-1])
-            y.append(parts[-1])
-    return X, y
+            line = line.strip()
+            if line.lower() == '@data':
+                in_data = True
+                continue
+            if in_data and line and not line.startswith('#'):
+                if ':' in line and ',' in line:
+                    data_part, label = line.rsplit(':', 1)
+                    vals = [float(v) for v in data_part.split(',')]
+                elif ',' in line:
+                    parts = line.split(',')
+                    label = parts[-1].strip()
+                    vals = [float(v) for v in parts[:-1]]
+                else:
+                    continue
+                X.append(vals)
+                y.append(label.strip())
+    le = LabelEncoder()
+    y_enc = le.fit_transform(y)
+    min_len = min(len(r) for r in X)
+    return np.array([r[:min_len] for r in X]), y_enc
