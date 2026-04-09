@@ -24,3 +24,21 @@ def above_mean_fraction(x):
 def n_zero_crossings(x):
     xn = x - np.mean(x)
     return int(np.sum(np.diff(np.sign(xn)) != 0))
+
+def acf_lag1(x):
+    """Autocorrelation at lag 1."""
+    if len(x) > 1:
+        return float(np.corrcoef(x[:-1], x[1:])[0, 1])
+    return 0.0
+
+def acf_lag2(x):
+    """Autocorrelation at lag 2."""
+    if len(x) > 2:
+        return float(np.corrcoef(x[:-2], x[2:])[0, 1])
+    return 0.0
+
+def hist_entropy(x, bins=10):
+    """Histogram-based entropy."""
+    counts, _ = np.histogram(x, bins=bins)
+    probs = counts / (counts.sum() + 1e-10)
+    return float(-np.sum(probs * np.log(probs + 1e-10)))
