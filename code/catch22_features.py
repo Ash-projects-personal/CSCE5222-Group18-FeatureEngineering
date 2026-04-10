@@ -44,7 +44,7 @@ def hist_entropy(x, bins=10):
     return float(-np.sum(probs * np.log(probs + 1e-10)))
 
 def spectral_entropy(x):
-    """Spectral entropy via FFT — NOTE: not normalized yet, values will be wrong."""
+    """Spectral entropy via FFT — fixed: normalize before computing entropy."""
     fft_vals = np.abs(np.fft.rfft(x)) ** 2
-    # BUG: forgot to normalize fft_vals — entropy will be inflated
+    fft_vals = fft_vals / (fft_vals.sum() + 1e-10)  # normalize to probability dist
     return float(-np.sum(fft_vals * np.log(fft_vals + 1e-10)))
