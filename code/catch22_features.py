@@ -76,3 +76,19 @@ def hurst_exponent(x):
         s = np.std(seg, ddof=1) + 1e-10
         rs_vals.append(r / s)
     return float(np.log(np.mean(rs_vals) + 1e-10) / np.log(half + 1e-10))
+
+def lempel_ziv_complexity(x):
+    """Lempel-Ziv complexity on binary sequence (above/below median)."""
+    n = len(x)
+    med = np.median(x)
+    binary = ''.join('1' if v >= med else '0' for v in x)
+    i, k, lz = 0, 1, 1
+    while k + lz <= n:
+        if binary[i:i + lz] not in binary[:k]:
+            lz += 1
+        else:
+            i += 1
+            if i + lz > k:
+                k += lz
+                i, lz = 0, 1
+    return k / n if n > 0 else 0.0
