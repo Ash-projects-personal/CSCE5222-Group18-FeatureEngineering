@@ -48,3 +48,31 @@ def spectral_entropy(x):
     fft_vals = np.abs(np.fft.rfft(x)) ** 2
     fft_vals = fft_vals / (fft_vals.sum() + 1e-10)  # normalize to probability dist
     return float(-np.sum(fft_vals * np.log(fft_vals + 1e-10)))
+
+def permutation_entropy(x, m=3):
+    """Permutation entropy with embedding dimension m."""
+    n = len(x)
+    if n < m:
+        return 0.0
+    patterns = {}
+    for i in range(n - m + 1):
+        pat = tuple(np.argsort(x[i:i + m]))
+        patterns[pat] = patterns.get(pat, 0) + 1
+    total = sum(patterns.values())
+    probs = np.array(list(patterns.values())) / total
+    return float(-np.sum(probs * np.log(probs + 1e-10)))
+
+def hurst_exponent(x):
+    """Simplified Hurst exponent via R/S analysis."""
+    n = len(x)
+    if n <= 20:
+        return 0.5
+    half = n // 2
+    rs_vals = []
+    for seg in [x[:half], x[half:]]:
+        seg = seg - seg.mean()
+        cumsum = np.cumsum(seg)
+        r = cumsum.max() - cumsum.min()
+        s = np.std(seg, ddof=1) + 1e-10
+        rs_vals.append(r / s)
+    return float(np.log(np.mean(rs_vals) + 1e-10) / np.log(half + 1e-10))
