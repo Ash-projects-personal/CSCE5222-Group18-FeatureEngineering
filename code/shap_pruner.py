@@ -22,8 +22,9 @@ def shap_prune(X_train, y_train, X_test, feature_names, keep_frac=0.6, task='cla
     else:
         mean_abs = np.abs(shap_vals).mean(axis=0)
     n_keep = max(1, int(len(feature_names) * keep_frac))
-    top_idx = np.argsort(mean_abs)[::-1][:n_keep]
-    return X_train[:, top_idx], X_test[:, top_idx], [feature_names[i] for i in top_idx]
+    top_idx = np.argsort(mean_abs)[::-1][:n_keep].astype(int)  # cast to int
+    top_idx_sorted = np.sort(top_idx)
+    return X_train[:, top_idx_sorted], X_test[:, top_idx_sorted], [feature_names[i] for i in top_idx_sorted]
 
 # KNOWN BUG: When dataset has >2 classes (e.g. SyntheticControl with 6 classes),
 # shap_vals comes back as a 3D ndarray (n_samples x n_features x n_classes)
