@@ -31,3 +31,23 @@ def shap_prune(X_train, y_train, X_test, feature_names, keep_frac=0.6, task='cla
 # and mean(axis=0) gives a 2D matrix, not a 1D vector.
 # This causes TypeError when indexing feature_names.
 # Fix needed: detect ndim and reduce accordingly.
+
+
+def evaluate_classification(X_tr, y_tr, X_te, y_te):
+    """Train LightGBM classifier and return accuracy and F1."""
+    from sklearn.metrics import accuracy_score, f1_score
+    clf = lgb.LGBMClassifier(n_estimators=200, learning_rate=0.05,
+                              num_leaves=31, random_state=42, verbose=-1)
+    clf.fit(X_tr, y_tr)
+    preds = clf.predict(X_te)
+    return accuracy_score(y_te, preds), f1_score(y_te, preds, average='weighted')
+
+
+def evaluate_regression(X_tr, y_tr, X_te, y_te):
+    """Train LightGBM regressor and return MSE and MAE."""
+    from sklearn.metrics import mean_squared_error, mean_absolute_error
+    reg = lgb.LGBMRegressor(n_estimators=300, learning_rate=0.05,
+                             num_leaves=31, random_state=42, verbose=-1)
+    reg.fit(X_tr, y_tr)
+    preds = reg.predict(X_te)
+    return mean_squared_error(y_te, preds), mean_absolute_error(y_te, preds)
