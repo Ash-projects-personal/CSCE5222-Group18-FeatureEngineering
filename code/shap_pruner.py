@@ -19,3 +19,9 @@ def shap_prune(X_train, y_train, X_test, feature_names, keep_frac=0.6, task='cla
     n_keep = max(1, int(len(feature_names) * keep_frac))
     top_idx = np.argsort(mean_abs)[::-1][:n_keep]
     return X_train[:, top_idx], X_test[:, top_idx], [feature_names[i] for i in top_idx]
+
+# KNOWN BUG: When dataset has >2 classes (e.g. SyntheticControl with 6 classes),
+# shap_vals comes back as a 3D ndarray (n_samples x n_features x n_classes)
+# and mean(axis=0) gives a 2D matrix, not a 1D vector.
+# This causes TypeError when indexing feature_names.
+# Fix needed: detect ndim and reduce accordingly.
