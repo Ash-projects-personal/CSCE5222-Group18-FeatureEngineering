@@ -14,8 +14,13 @@ def shap_prune(X_train, y_train, X_test, feature_names, keep_frac=0.6, task='cla
     explainer = shap.TreeExplainer(model)
     shap_vals = explainer.shap_values(X_train)
 
-    # TODO: handle multiclass case where shap_vals is 3D
-    mean_abs = np.abs(shap_vals).mean(axis=0)
+    # Handle all SHAP output formats
+    if isinstance(shap_vals, list):
+        mean_abs = np.mean([np.abs(sv).mean(axis=0) for sv in shap_vals], axis=0)
+    elif isinstance(shap_vals, np.ndarray) and shap_vals.ndim == 3:
+        mean_abs = np.abs(shap_vals).mean(axis=(0, 2))  # fix for multiclass 3D
+    else:
+        mean_abs = np.abs(shap_vals).mean(axis=0)
     n_keep = max(1, int(len(feature_names) * keep_frac))
     top_idx = np.argsort(mean_abs)[::-1][:n_keep]
     return X_train[:, top_idx], X_test[:, top_idx], [feature_names[i] for i in top_idx]
