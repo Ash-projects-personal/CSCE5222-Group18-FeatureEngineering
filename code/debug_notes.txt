@@ -1,0 +1,14 @@
+Debug log - April 12
+
+Ran pipeline on GunPoint dataset.
+Expected accuracy ~0.85, got 0.0 for both raw and catch22.
+
+Hypothesis: label encoding is wrong.
+Checked: y values are [130, 15, 135, 94, 34, ...] — these are NOT class labels!
+They look like row indices being used as labels.
+
+Root cause: the .ts file uses colon-separated labels (e.g. "...,0.64:2")
+but our parser splits on comma and takes the last element, which gives
+a garbage value from the last float in the data row.
+
+Fix: use rsplit(':', 1) to correctly separate data from label.
