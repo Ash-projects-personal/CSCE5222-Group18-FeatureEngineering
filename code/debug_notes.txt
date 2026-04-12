@@ -18,3 +18,8 @@ After applying rsplit fix:
   GunPoint  raw=0.8267  catch22=0.8867  (was 0.0 before fix)
   ECG200    raw=0.8100  catch22=0.7700
 Label parsing is now correct.
+
+Results - April 12 (14:30)
+Added ECG200 and ItalyPowerDemand to experiments:
+  ECG200           raw=0.81  catch22=0.77
+  ItalyPowerDemand raw=0.97  catch22=0.76  (raw wins here - local shape matters)
