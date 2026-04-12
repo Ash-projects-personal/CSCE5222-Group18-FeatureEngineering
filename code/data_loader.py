@@ -24,8 +24,10 @@ def parse_ts_file(filepath):
                 in_data = True
                 continue
             if in_data and line and not line.startswith('#'):
+                # UCR .ts files use colon to separate data from label
+                # e.g.: -0.64,-0.63,...,-0.64:2
                 if ':' in line and ',' in line:
-                    data_part, label = line.rsplit(':', 1)
+                    data_part, label = line.rsplit(':', 1)  # split on LAST colon
                     vals = [float(v) for v in data_part.split(',')]
                 elif ',' in line:
                     parts = line.split(',')
