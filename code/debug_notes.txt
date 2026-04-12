@@ -23,3 +23,8 @@ Results - April 12 (14:30)
 Added ECG200 and ItalyPowerDemand to experiments:
   ECG200           raw=0.81  catch22=0.77
   ItalyPowerDemand raw=0.97  catch22=0.76  (raw wins here - local shape matters)
+
+Results - April 12 (16:00)
+Added SyntheticControl and TwoLeadECG:
+  SyntheticControl raw=0.887  catch22=0.950  (catch22 wins by 6.3%)
+  TwoLeadECG       raw=0.500  catch22=0.500  (both struggle - very small train set)
