@@ -30,3 +30,9 @@ def build_lag_features(series, lags=(1, 2, 3, 6, 12, 24), windows=(3, 6, 12, 24)
         df[f'roll_max_{w}']  = roll.max()
     df.dropna(inplace=True)  # drop rows with NaN from lag/rolling
     return df
+
+
+def train_test_split_time(df, train_frac=0.8):
+    """Time-series aware train/test split (no shuffling)."""
+    split = int(len(df) * train_frac)
+    return df.iloc[:split], df.iloc[split:]
