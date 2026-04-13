@@ -15,3 +15,13 @@ def load_ett():
         urllib.request.urlretrieve(ETT_URL, local)
     df = pd.read_csv(local, parse_dates=['date'])
     return df
+
+
+def build_lag_features_v1(series, lags=(1, 2, 3)):
+    """Build lag features — v1: has off-by-one alignment bug."""
+    df = pd.DataFrame({'value': series})
+    for lag in lags:
+        # BUG: shift(lag) is correct but we're not dropping NaN rows
+        # so the first `lag` rows will have NaN features but valid targets
+        df[f'lag_{lag}'] = df['value'].shift(lag)
+    return df  # NaN rows not dropped — will cause issues in training
