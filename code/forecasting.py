@@ -17,11 +17,16 @@ def load_ett():
     return df
 
 
-def build_lag_features_v1(series, lags=(1, 2, 3)):
-    """Build lag features — v1: has off-by-one alignment bug."""
+def build_lag_features(series, lags=(1, 2, 3, 6, 12, 24), windows=(3, 6, 12, 24)):
+    """Build lag and rolling statistics features with proper NaN handling."""
     df = pd.DataFrame({'value': series})
     for lag in lags:
-        # BUG: shift(lag) is correct but we're not dropping NaN rows
-        # so the first `lag` rows will have NaN features but valid targets
         df[f'lag_{lag}'] = df['value'].shift(lag)
-    return df  # NaN rows not dropped — will cause issues in training
+    for w in windows:
+        roll = df['value'].rolling(window=w)
+        df[f'roll_mean_{w}'] = roll.mean()
+        df[f'roll_std_{w}']  = roll.std()
+        df[f'roll_min_{w}']  = roll.min()
+        df[f'roll_max_{w}']  = roll.max()
+    df.dropna(inplace=True)  # drop rows with NaN from lag/rolling
+    return df
