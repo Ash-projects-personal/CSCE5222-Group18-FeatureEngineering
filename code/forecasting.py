@@ -46,3 +46,14 @@ def ridge_baseline(X_tr, y_tr, X_te, y_te):
     reg.fit(X_tr, y_tr)
     preds = reg.predict(X_te)
     return mean_squared_error(y_te, preds), mean_absolute_error(y_te, preds)
+
+
+def lgbm_forecast(X_tr, y_tr, X_te, y_te):
+    """LightGBM regressor on full lag+rolling feature set."""
+    import lightgbm as lgb
+    from sklearn.metrics import mean_squared_error, mean_absolute_error
+    reg = lgb.LGBMRegressor(n_estimators=300, learning_rate=0.05,
+                             num_leaves=31, random_state=42, verbose=-1)
+    reg.fit(X_tr, y_tr)
+    preds = reg.predict(X_te)
+    return mean_squared_error(y_te, preds), mean_absolute_error(y_te, preds), preds
