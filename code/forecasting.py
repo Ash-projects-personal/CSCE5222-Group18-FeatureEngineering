@@ -36,3 +36,13 @@ def train_test_split_time(df, train_frac=0.8):
     """Time-series aware train/test split (no shuffling)."""
     split = int(len(df) * train_frac)
     return df.iloc[:split], df.iloc[split:]
+
+
+def ridge_baseline(X_tr, y_tr, X_te, y_te):
+    """Ridge regression on lag-1 only as baseline."""
+    from sklearn.linear_model import Ridge
+    from sklearn.metrics import mean_squared_error, mean_absolute_error
+    reg = Ridge(alpha=1.0)
+    reg.fit(X_tr, y_tr)
+    preds = reg.predict(X_te)
+    return mean_squared_error(y_te, preds), mean_absolute_error(y_te, preds)
