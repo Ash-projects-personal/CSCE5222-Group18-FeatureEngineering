@@ -1,4 +1,5 @@
 # forecasting.py — ETTh1 multivariate forecasting pipeline
+# Fixed: target column must be excluded from feature matrix to avoid data leakage
 import os
 import pandas as pd
 import numpy as np
