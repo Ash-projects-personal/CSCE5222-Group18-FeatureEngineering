@@ -28,3 +28,9 @@ Results - April 12 (16:00)
 Added SyntheticControl and TwoLeadECG:
   SyntheticControl raw=0.887  catch22=0.950  (catch22 wins by 6.3%)
   TwoLeadECG       raw=0.500  catch22=0.500  (both struggle - very small train set)
+
+Data leakage bug - April 14 (14:00)
+MSE was suspiciously low (0.001) on ETTh1.
+Found: target column 'OT' was accidentally included in the feature matrix.
+Model was essentially predicting OT from OT — trivial task.
+Fix: explicitly drop 'OT' from X before training.
