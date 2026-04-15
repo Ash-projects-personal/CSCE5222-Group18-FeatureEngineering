@@ -41,3 +41,9 @@ Embeddings are noisy and MSE is worse than lag+rolling baseline.
 Root cause: default learning rate (0.001) too slow for 80 epochs.
 Also: no early stopping, so training stops at max_iter regardless.
 Fix: add early_stopping=True and increase n_iter_no_change.
+
+SHAP pruning on forecasting - April 15 (16:45)
+Applied SHAP to lag+rolling features (28 total).
+SHAP removed 12 features (43% reduction).
+MSE with pruned features: 0.2303 vs 0.2283 without pruning.
+Negligible difference — confirms many lag features are redundant.
