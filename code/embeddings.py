@@ -18,7 +18,8 @@ def train_mlp_embeddings(series, window=24, hidden=32, epochs=80):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     mlp = MLPRegressor(hidden_layer_sizes=(hidden,), max_iter=epochs,
-                       random_state=42)  # no early stopping yet
+                       random_state=42, early_stopping=True,
+                       n_iter_no_change=10, validation_fraction=0.1)
     mlp.fit(X_scaled, y)
     W0, b0 = mlp.coefs_[0], mlp.intercepts_[0]
     embeddings = np.tanh(X_scaled @ W0 + b0)
