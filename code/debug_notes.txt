@@ -34,3 +34,10 @@ MSE was suspiciously low (0.001) on ETTh1.
 Found: target column 'OT' was accidentally included in the feature matrix.
 Model was essentially predicting OT from OT — trivial task.
 Fix: explicitly drop 'OT' from X before training.
+
+MLP convergence issue - April 15 (10:30)
+MLPRegressor not converging — ConvergenceWarning after 80 iterations.
+Embeddings are noisy and MSE is worse than lag+rolling baseline.
+Root cause: default learning rate (0.001) too slow for 80 epochs.
+Also: no early stopping, so training stops at max_iter regardless.
+Fix: add early_stopping=True and increase n_iter_no_change.
