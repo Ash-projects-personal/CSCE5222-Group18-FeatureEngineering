@@ -24,3 +24,9 @@ def train_mlp_embeddings(series, window=24, hidden=32, epochs=80):
     W0, b0 = mlp.coefs_[0], mlp.intercepts_[0]
     embeddings = np.tanh(X_scaled @ W0 + b0)
     return embeddings, mlp, scaler
+
+
+def concat_with_lag_features(embeddings, lag_features):
+    """Concatenate MLP embeddings with lag+rolling features."""
+    min_len = min(len(embeddings), len(lag_features))
+    return np.hstack([lag_features[:min_len], embeddings[:min_len]])
