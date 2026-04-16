@@ -38,3 +38,12 @@ def isolation_forest_detect(X, contamination=0.15):
     thresh = np.percentile(scores, 100 * (1 - contamination))
     preds = (scores > thresh).astype(int)
     return scores, preds
+
+
+# Analysis note (April 16):
+# Catch22 features normalize the signal, which removes the amplitude
+# information that makes spike anomalies detectable.
+# However, features like diff_variance, time_reversibility, and
+# lempel_ziv_complexity should still capture flatline and noise anomalies.
+# Plan: use SHAP to identify which catch22 features are most useful
+# for anomaly detection, then re-run with only those features.
