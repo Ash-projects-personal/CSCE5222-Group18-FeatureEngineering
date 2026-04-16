@@ -28,3 +28,13 @@ def sliding_windows(signal, window=50, step=10):
         X.append(signal[start:start + window])
         y.append(int(np.mean(signal[start:start + window]) > 0.3))
     return np.array(X), np.array(y)
+
+
+def isolation_forest_detect(X, contamination=0.15):
+    """Run Isolation Forest and return anomaly scores."""
+    iso = IsolationForest(contamination=contamination, random_state=42)
+    iso.fit(X)
+    scores = -iso.score_samples(X)
+    thresh = np.percentile(scores, 100 * (1 - contamination))
+    preds = (scores > thresh).astype(int)
+    return scores, preds
