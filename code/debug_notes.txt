@@ -47,3 +47,14 @@ Applied SHAP to lag+rolling features (28 total).
 SHAP removed 12 features (43% reduction).
 MSE with pruned features: 0.2303 vs 0.2283 without pruning.
 Negligible difference — confirms many lag features are redundant.
+
+Catch22 anomaly detection - April 16 (13:30)
+Applied catch22 to PPG windows instead of raw windows.
+Results:
+  Raw windows:  F1=0.871, AUC=0.996
+  Catch22:      F1=0.581, AUC=0.938  <-- much worse!
+
+Why? Catch22 normalizes amplitude-based features.
+Spike anomalies are defined by high amplitude, but catch22 features
+like z-score outlier fraction get normalized away.
+Investigating SHAP-guided selection to recover performance.
