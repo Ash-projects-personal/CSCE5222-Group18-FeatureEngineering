@@ -58,3 +58,11 @@ Why? Catch22 normalizes amplitude-based features.
 Spike anomalies are defined by high amplitude, but catch22 features
 like z-score outlier fraction get normalized away.
 Investigating SHAP-guided selection to recover performance.
+
+SHAP-guided anomaly detection - April 17 (09:30)
+Used supervised LightGBM proxy to get SHAP importances on catch22 features.
+Top features: diff_variance, lempel_ziv, time_reversibility, nonlinearity
+Removed: hist_entropy, spectral_entropy, peak_freq (these were hurting)
+Results after SHAP selection (12/22 features kept):
+  Catch22+SHAP: F1=0.710, AUC=0.959  (was 0.581 with all catch22 features)
+SHAP-guided selection successfully recovers most of the performance.
