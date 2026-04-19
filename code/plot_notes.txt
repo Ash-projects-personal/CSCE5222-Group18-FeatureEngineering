@@ -1,0 +1,8 @@
+Figure generation notes
+
+fig1 - classification_accuracy.png
+  - Grouped bar chart: Raw vs Catch22 vs Catch22+SHAP
+  - 5 UCR datasets on x-axis
+  - Shows Catch22 wins on SyntheticControl (+6.3%) and GunPoint (+6%)
+  - Raw wins on ItalyPowerDemand (local shape patterns)
+  Status: DONE
