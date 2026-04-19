@@ -24,3 +24,8 @@ fig5 - forecast_vs_actual.png
   - Line plot: ground truth vs predicted (first 200 test points)
   - Shows Lag+Rolling closely tracks actual OT values
   Status: DONE
+
+fig6 - anomaly_signal.png
+  - BVP signal with red shaded anomaly regions
+  - Shows 5 injected anomaly segments clearly
+  Status: DONE
