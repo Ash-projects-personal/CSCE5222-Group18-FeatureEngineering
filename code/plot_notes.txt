@@ -13,3 +13,14 @@ fig3 - shap_importance.png
   - Top features: acf_lag1, diff_variance, hurst, acf_lag2
   - Bottom features: hist_entropy, peak_freq (pruned by SHAP)
   Status: DONE
+
+fig4 - forecasting_metrics.png
+  - Side-by-side MSE and MAE bar charts
+  - 4 methods: Raw(lag-1), Lag+Rolling, Lag+Roll+Embed, Lag+Roll+SHAP
+  - MSE: 1.285 → 0.228 → 0.337 → 0.230
+  Status: DONE
+
+fig5 - forecast_vs_actual.png
+  - Line plot: ground truth vs predicted (first 200 test points)
+  - Shows Lag+Rolling closely tracks actual OT values
+  Status: DONE
