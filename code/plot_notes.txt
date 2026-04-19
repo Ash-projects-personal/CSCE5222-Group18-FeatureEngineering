@@ -6,3 +6,10 @@ fig1 - classification_accuracy.png
   - Shows Catch22 wins on SyntheticControl (+6.3%) and GunPoint (+6%)
   - Raw wins on ItalyPowerDemand (local shape patterns)
   Status: DONE
+
+fig3 - shap_importance.png
+  - Horizontal bar chart sorted by mean |SHAP|
+  - GunPoint dataset, 22 catch22 features
+  - Top features: acf_lag1, diff_variance, hurst, acf_lag2
+  - Bottom features: hist_entropy, peak_freq (pruned by SHAP)
+  Status: DONE
