@@ -29,3 +29,8 @@ fig6 - anomaly_signal.png
   - BVP signal with red shaded anomaly regions
   - Shows 5 injected anomaly segments clearly
   Status: DONE
+
+fig7 - anomaly_metrics.png
+  - F1 and AUC comparison: Raw vs Catch22 vs Catch22+SHAP
+  - Shows SHAP selection recovers F1 (0.58 → 0.71)
+  Status: DONE
