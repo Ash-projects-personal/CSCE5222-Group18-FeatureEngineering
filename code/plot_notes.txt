@@ -40,3 +40,9 @@ fig8 - feature_correlation.png
   - GunPoint dataset
   - Shows high correlation between acf_lag1 and acf_lag2 (expected)
   Status: DONE
+
+fig9 - pca_projection.png
+  - 2D PCA of catch22 features, SyntheticControl dataset
+  - 6 classes clearly separated in PC1/PC2 space
+  - Confirms catch22 is discriminative for this dataset
+  Status: DONE
