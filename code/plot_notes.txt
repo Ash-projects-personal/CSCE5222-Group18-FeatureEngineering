@@ -34,3 +34,9 @@ fig7 - anomaly_metrics.png
   - F1 and AUC comparison: Raw vs Catch22 vs Catch22+SHAP
   - Shows SHAP selection recovers F1 (0.58 → 0.71)
   Status: DONE
+
+fig8 - feature_correlation.png
+  - Lower triangle correlation heatmap of 22 catch22 features
+  - GunPoint dataset
+  - Shows high correlation between acf_lag1 and acf_lag2 (expected)
+  Status: DONE
