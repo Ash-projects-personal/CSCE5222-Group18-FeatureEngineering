@@ -46,3 +46,9 @@ fig9 - pca_projection.png
   - 6 classes clearly separated in PC1/PC2 space
   - Confirms catch22 is discriminative for this dataset
   Status: DONE
+
+fig11 - pipeline_flowchart.png
+  - Complete methodology flowchart
+  - Addresses Phase 1 feedback: slide 10 was incomplete
+  - Shows: Raw Data → Preprocessing → Feature Generation → SHAP Pruning → Models
+  Status: DONE
