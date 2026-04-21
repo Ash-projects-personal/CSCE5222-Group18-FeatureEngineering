@@ -52,3 +52,8 @@ fig11 - pipeline_flowchart.png
   - Addresses Phase 1 feedback: slide 10 was incomplete
   - Shows: Raw Data → Preprocessing → Feature Generation → SHAP Pruning → Models
   Status: DONE
+
+fig12 - summary_heatmap.png
+  - Heatmap of all metrics across all tasks and methods
+  - Quick visual summary for the report
+  Status: DONE
