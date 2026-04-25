@@ -1,3 +1,4 @@
+# Updated April 25: fixed slide 2 outline per Phase 1 feedback
 """
 build_pptx.py
 =============
