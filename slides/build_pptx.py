@@ -1,4 +1,4 @@
-# Updated April 25: fixed outline and flowchart per Phase 1 feedback
+# Updated April 25: fixed outline, flowchart, and timeline per Phase 1 feedback
 """
 build_pptx.py
 =============
