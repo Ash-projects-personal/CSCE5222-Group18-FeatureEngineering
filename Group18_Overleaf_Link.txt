@@ -1,0 +1,20 @@
+CSCE 5222 Feature Engineering - Group 18
+Project 2: Implementation and Evaluation of Hybrid, Automated, and Interpretable Feature Engineering for Time-Series
+
+Overleaf Shareable Link:
+[PASTE YOUR OVERLEAF LINK HERE AFTER UPLOADING report.tex]
+
+Instructions to create Overleaf project:
+1. Go to https://www.overleaf.com
+2. Click "New Project" → "Upload Project"
+3. Upload the report.tex file and the figures/ folder
+4. The project will compile automatically using the IEEE template
+5. Click "Share" → "Turn on link sharing" → Copy the link
+6. Paste the link in this file and submit on CANVAS
+
+GitHub Repository:
+https://github.com/Ash-projects-personal/CSCE5222-Group18-FeatureEngineering
+
+Authors:
+- Ashish Rathnakar Shetty (ID: 11808466) | ashishrathnakarshetty@unt.edu
+- Kushal Sai Venigalla (ID: 11852559) | KushalSaiVenigalla@unt.edu
