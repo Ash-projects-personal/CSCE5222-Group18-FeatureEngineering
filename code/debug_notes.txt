@@ -66,3 +66,6 @@ Removed: hist_entropy, spectral_entropy, peak_freq (these were hurting)
 Results after SHAP selection (12/22 features kept):
   Catch22+SHAP: F1=0.710, AUC=0.959  (was 0.581 with all catch22 features)
 SHAP-guided selection successfully recovers most of the performance.
+
+Final summary - April 27
+All bugs fixed. Pipeline runs cleanly end-to-end.
