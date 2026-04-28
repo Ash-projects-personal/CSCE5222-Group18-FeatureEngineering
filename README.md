@@ -50,3 +50,6 @@ python generate_figures.py
 - **Classification:** Catch22 + LightGBM improved accuracy by up to 6.3% over raw features (SyntheticControl). SHAP pruning removed 40% of features with zero accuracy loss.
 - **Forecasting:** Lag + Rolling Statistics reduced MSE from 1.285 to 0.228 (82% improvement over raw lag-1 baseline).
 - **Anomaly Detection:** SHAP-guided feature selection improved F1 from 0.581 to 0.710 compared to unguided Catch22.
+
+## Final Submission
+All deliverables verified April 28, 2026.
