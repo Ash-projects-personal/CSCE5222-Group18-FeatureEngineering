@@ -2,6 +2,7 @@
 feature_engineering_pipeline.py
 ================================
 CSCE 5222 - Feature Engineering | Group 18
+# Last verified: April 28, 2026 — all experiments pass
 Authors: Ashish Rathnakar Shetty, Kushal Sai Venigalla
 University of North Texas
 
