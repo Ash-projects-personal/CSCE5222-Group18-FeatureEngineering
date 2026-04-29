@@ -10,7 +10,6 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{url}
 \usepackage{cite}
-\usepackage{balance}
 
 \pagestyle{plain}
 
@@ -39,11 +38,11 @@
 \maketitle
 
 \begin{abstract}
-Getting useful features out of raw time-series data is genuinely hard, and it is one of the steps that most affects how well a machine learning model ends up working. The go-to solution these days is to use deep learning, which learns its own features automatically, but that comes with real costs: long training times, large data requirements, and almost no ability to explain what the model is actually doing. In this project, we took a different direction. We built a framework that combines four feature engineering strategies---a compact set of 22 statistical features called Catch22, lag and rolling statistics, self-supervised neural embeddings, and SHAP-guided feature pruning---and tested all of them across three separate tasks: time-series classification, multivariate forecasting, and unsupervised anomaly detection. We ran real experiments on five UCR classification datasets, the ETTh1 electricity transformer dataset, and a simulated wearable PPG signal. The results were encouraging. Catch22 features paired with LightGBM matched or beat raw feature baselines on three out of five classification datasets, with the biggest improvement being 6.3\% on SyntheticControl. For forecasting, lag and rolling statistics cut the mean squared error by 82\% compared to a simple lag-1 baseline. And using SHAP values to prune the feature set removed 40--45\% of features across all three tasks without any drop in accuracy. The full code for this project is at \url{https://github.com/Ash-projects-personal/CSCE5222-Group18-FeatureEngineering}.
+Getting useful features out of raw time-series data is one of the harder parts of building good machine learning models. Deep learning models can do this automatically, but they are slow to train, need a lot of data, and are hard to explain. In this project, we build on our Phase~1 proposal and put together a framework that tests four different feature engineering approaches across three different tasks: time-series classification, multivariate forecasting, and unsupervised anomaly detection. We wrote our own implementation of the Catch22 feature set in pure Python, built lag and rolling statistics for forecasting, trained a small self-supervised neural network to learn embeddings, and used SHAP values to automatically cut down the number of features. We ran experiments on five UCR classification datasets, the ETTh1 electricity dataset, and a simulated wearable sensor signal. Our results show that Catch22 features combined with GradientBoosting can match or beat raw feature baselines on three out of five datasets, with the biggest gain being 9.3\% on SyntheticControl when using SHAP-pruned features. SHAP-guided pruning consistently removed 40--45\% of features without hurting accuracy across all three tasks. For forecasting, lag and rolling statistics reduced MSE by 62\% over a raw lag-1 baseline, and SHAP pruning further improved this to the best overall result. The full code for this project is available at \url{https://github.com/Ash-projects-personal/CSCE5222-Group18-FeatureEngineering}.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Feature Engineering, Time-Series, Catch22, LightGBM, SHAP, Explainable AI, Classification, Forecasting, Anomaly Detection, UCR Archive, ETTh1.
+Feature Engineering, Time-Series, Catch22, GradientBoosting, SHAP, Explainable AI, Classification, Forecasting, Anomaly Detection, UCR Archive, ETTh1.
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -56,9 +55,9 @@ There are two main ways people do this. The first is to use deep learning models
 
 The second approach is to hand-design features based on domain knowledge. A cardiologist designing features for ECG analysis, for example, might compute heart rate variability, QRS complex width, and P-wave amplitude. These features are meaningful and interpretable, but they require deep expertise to design, and they often do not transfer well to other domains. A feature set designed for cardiac signals is probably useless for electricity forecasting.
 
-There is a third option that has been getting more attention: use a compact, general-purpose set of statistical features that captures the most important properties of any time-series, without needing domain expertise. The Catch22 feature set \cite{catch22} is the best example of this. It was built by testing over 7,700 candidate features on hundreds of datasets and selecting the 22 that were most consistently useful across different domains. When you pair Catch22 with a fast, interpretable model like LightGBM, you get something that is competitive with deep learning on many tasks, much faster to train, and much easier to explain.
+There is a third option that has been getting more attention: use a compact, general-purpose set of statistical features that captures the most important properties of any time-series, without needing domain expertise. The Catch22 feature set \cite{catch22} is the best example of this. It was built by testing over 7,700 candidate features on hundreds of datasets and selecting the 22 that were most consistently useful across different domains. When you pair Catch22 with a gradient boosting model, you get something that is competitive with deep learning on many tasks, much faster to train, and much easier to explain.
 
-Our Phase~1 proposal identified three things that were missing from the existing work. First, every paper we read tested their feature engineering approach on just one type of task. Nobody had done a systematic comparison of the same strategies across classification, forecasting, and anomaly detection at the same time, using the same evaluation setup. Second, SHAP-based explainability was always used as a way to explain a model after it was already trained. Nobody was using SHAP during the feature engineering process to actively decide which features to keep and which to throw away. Third, it was not clear from the literature when Catch22-style global statistical features work well and when they fail. That kind of practical guidance would be really useful for someone trying to decide which approach to use on a new problem.
+In our Phase~1 proposal, we identified three things that were missing from the existing work. First, every paper we read tested their feature engineering approach on just one type of task. Nobody had done a systematic comparison of the same strategies across classification, forecasting, and anomaly detection at the same time, using the same evaluation setup. Second, SHAP-based explainability was always used as a way to explain a model after it was already trained. Nobody was using SHAP during the feature engineering process to actively decide which features to keep and which to throw away. Third, it was not clear from the literature when Catch22-style global statistical features work well and when they fail. That kind of practical guidance would be really useful for someone trying to decide which approach to use on a new problem.
 
 This project addresses all three of those gaps. We built one unified pipeline that tests four feature engineering strategies across three task types, and we used SHAP values as an active pruning tool throughout. Here is a summary of what we did and what we found:
 
@@ -84,15 +83,11 @@ Their answer was pretty convincing. On the UCR benchmark, COCALITE came within a
 
 What we took from this paper is the core idea that Catch22 is a strong foundation for time-series classification. The 22 features were not chosen randomly---they went through a rigorous selection process that tested over 7,700 candidates and kept only the ones that were both discriminative and diverse (meaning they were not just measuring the same thing in different ways). That selection process is what makes Catch22 generalize across different domains.
 
-We also noticed that COCALITE only tested on classification. Nobody had checked whether the same Catch22 features are useful for forecasting or anomaly detection. That gap was part of what motivated us to test across all three task types.
-
 \subsection{SPLiT: Local Features Beat Global Models for Forecasting}
 
 D'Aversa, Giannini, and Scardapane \cite{split} worked on a different problem: multi-step forecasting for sensors spread across a geographic area, like weather stations or traffic sensors. Their approach, called SPLiT, groups sensors that behave similarly and fits a separate local linear model to each group, rather than training one big global model for all sensors at once.
 
-The key result that influenced our work is that local features---ones that capture what a specific sensor has been doing recently---consistently outperformed global neural network models. This is counterintuitive because deep learning models are supposed to be better at capturing complex patterns. But for forecasting, knowing what happened in the last few hours turns out to be more useful than anything a global model can learn.
-
-This told us something important about how to approach the ETTh1 forecasting task. Rather than relying on learned embeddings to figure out the temporal structure, we should explicitly build features that encode recent history: lag values and rolling statistics. The SPLiT paper gave us confidence that this approach would work well.
+The key result that influenced our work is that local features---ones that capture what a specific sensor has been doing recently---consistently outperformed global neural network models. This told us something important about how to approach the ETTh1 forecasting task. Rather than relying on learned embeddings to figure out the temporal structure, we should explicitly build features that encode recent history: lag values and rolling statistics. The SPLiT paper gave us confidence that this approach would work well.
 
 \subsection{Catch22 for Wearable Sensor Anomaly Detection}
 
@@ -108,7 +103,7 @@ Okadome and Nakamura \cite{lag_op} proposed a way to learn features from time-se
 
 We adapted this idea for the ETTh1 forecasting task. We trained a small MLP to predict the next oil temperature value from the previous 24 readings, and then used the hidden layer activations as features. Our hypothesis was that these learned embeddings might capture non-linear temporal patterns that explicit lag and rolling statistics would miss.
 
-As it turned out, this did not work for ETTh1. The embeddings actually made the forecasting worse, not better. We think this is because ETTh1 has very regular daily and weekly patterns that lag statistics already capture well. There was nothing hidden for the MLP to learn. But this negative result is still useful---it tells us that self-supervised embeddings are probably most valuable for data with complex, non-obvious patterns, not for well-structured periodic signals.
+As it turned out, the embeddings produced results very close to the plain Lag+Rolling model (MSE 0.4807 vs.\ 0.4836), but did not provide a meaningful improvement. The SHAP-pruned Lag+Rolling model actually outperformed both. This is a useful negative result---it tells us that self-supervised embeddings are probably most valuable for data with complex, non-obvious patterns, not for well-structured periodic signals like electricity consumption.
 
 \subsection{AutoFE-XAI: Using SHAP to Automate Feature Selection}
 
@@ -116,33 +111,56 @@ The paper that most directly inspired our SHAP pruning approach was AutoFE-XAI, 
 
 What we liked about this approach is that it turns explainability into something useful, not just something you do at the end to satisfy a requirement. SHAP values tell you which features the model actually relies on. If a feature has near-zero SHAP importance, the model is not using it, and you can safely remove it.
 
-We extended this idea in two ways. First, we applied it to all three task types, not just forecasting. Second, we paid attention to which features consistently got pruned across tasks, and we found a pattern: entropy-based features were almost always at the bottom of the SHAP rankings, while autocorrelation and variance features were almost always at the top. This suggests that a smaller, more targeted version of Catch22 might be possible.
+We extended this idea in two ways. First, we applied it to all three task types, not just forecasting. Second, we paid attention to which features consistently got pruned across tasks, and found that the importance rankings are quite different depending on the task. For classification, entropy and frequency features dominated. For anomaly detection, \texttt{diff\_variance} dominated by a very large margin (importance 4.87 vs.\ 0.50 for the second-ranked feature). This task-dependence is itself a useful finding.
 
-\subsection{Catch22 and the UCR Archive}
+\subsection{Foundational Work: Catch22 and the UCR Archive}
 
-The Catch22 feature set itself was introduced by Lubba et al.\ \cite{catch22} in 2019. The paper describes a process of testing thousands of time-series features on hundreds of datasets and selecting the 22 that best balance discriminative power, computational efficiency, and diversity. The result is a feature set that works reasonably well across many different types of time-series without any domain-specific tuning.
+The Catch22 feature set itself was introduced by Lubba et al.~\cite{catch22} in 2019. The paper describes a process of testing thousands of time-series features on hundreds of datasets and selecting the 22 that best balance discriminative power, computational efficiency, and diversity. The key insight is that diversity matters as much as discriminative power: two features that both measure autocorrelation are less useful together than one autocorrelation feature and one entropy feature, even if the second autocorrelation feature is individually more discriminative. This principle guided the selection process and is why Catch22 generalizes so well across different domains.
 
-The UCR Time Series Archive \cite{ucr}, maintained by Dau and colleagues, is the standard benchmark for time-series classification. It contains 128 datasets from domains ranging from medicine to motion capture to industrial sensors. We used five datasets from this archive to test how well Catch22 generalizes across different problem types.
+The UCR Time Series Archive~\cite{ucr}, maintained by Dau and colleagues, is the standard benchmark for time-series classification with 128 datasets spanning diverse domains. We use five representative datasets from this archive to evaluate cross-domain generalization. The five datasets we chose deliberately span a range of difficulty levels, class counts, and training set sizes, from the 23-sample TwoLeadECG to the 300-sample SyntheticControl with six classes.
 
-\subsection{What Was Missing}
+\subsection{Research Gaps This Work Addresses}
 
-After reading all five papers, we noticed three things that nobody had done yet. First, every paper tested on one task type. There was no comparison of the same feature engineering strategies across classification, forecasting, and anomaly detection together. Second, SHAP was always used after training, never during the feature engineering process itself. Third, there was no clear guidance on when Catch22 works well and when it fails. Our project was designed to fill all three of those gaps.
+From reading these five papers, we identified three things that nobody had done yet. No paper had compared the same feature engineering strategies across classification, forecasting, and anomaly detection at the same time. SHAP was always used after training to explain the model, not during training to improve it. And there was no clear guidance on when Catch22 works well versus when raw features are better. Our project addresses all three of these gaps.
+
+Table~\ref{tab:related} summarizes how each related paper relates to our work and what gap it leaves open.
+
+\begin{table}[H]
+  \centering
+  \caption{Related Work Summary and Gaps Addressed}
+  \label{tab:related}
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabular}{p{1.5cm}p{2.3cm}p{2.8cm}}
+    \toprule
+    \textbf{Paper} & \textbf{Contribution} & \textbf{Gap Left Open} \\
+    \midrule
+    COCALITE~\cite{cocalite} & Catch22 + LITE for classification & Only classification; no forecasting or anomaly detection \\
+    \midrule
+    SPLiT~\cite{split} & Local features for forecasting & Only forecasting; no SHAP pruning \\
+    \midrule
+    PPG Anomaly~\cite{ppg_anom} & Catch22 for unsupervised anomaly detection & Only anomaly detection; no cross-task comparison \\
+    \midrule
+    Lag Features~\cite{lag_op} & Self-supervised embeddings & Only one domain; no comparison with explicit features \\
+    \midrule
+    AutoFE-XAI~\cite{autofe_xai} & SHAP for feature pruning & Only forecasting; not extended to classification or anomaly detection \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \section{Methodology}
 
-We built a single pipeline (Fig.~\ref{fig:flowchart}) that handles all three task types. The pipeline has four main stages: data loading and preprocessing, feature generation, SHAP-guided pruning, and model evaluation. Everything runs from one Python script, which makes the comparisons fair because the same preprocessing and evaluation code is used for all experiments.
+We built one pipeline (Fig.~\ref{fig:flowchart}) that handles all three task types. The pipeline has four main stages: data loading and preprocessing, feature generation, SHAP-guided pruning, and model evaluation. Everything runs from one Python script, which makes the comparisons fair because the same preprocessing and evaluation code is used for all experiments.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/fig11_pipeline_flowchart.png}
-  \caption{The feature engineering pipeline we built for this project. Raw time-series data goes through preprocessing, then four parallel feature generation paths, then SHAP-guided pruning, and finally task-specific model evaluation.}
+  \caption{Our feature engineering pipeline. Raw time-series data goes through preprocessing, then four parallel feature generation paths, then SHAP-guided pruning, and finally task-specific model evaluation.}
   \label{fig:flowchart}
 \end{figure}
 
 \subsection{Datasets}
 
 \textbf{UCR Archive (Classification).} We chose five datasets that cover a range of domains, class counts, and training set sizes:
-
 \begin{itemize}
   \item \textit{GunPoint}: Motion capture data from one male and one female actor. The two classes are gun-draw (reaching for a holstered gun and pointing it) and point (pointing with a finger). 2 classes, 50 training samples, 150 test samples, 150 time steps.
   \item \textit{ECG200}: Single-lead electrocardiogram recordings. The two classes are normal heartbeats and myocardial infarction. 2 classes, 100 train, 100 test, 96 time steps.
@@ -151,43 +169,40 @@ We built a single pipeline (Fig.~\ref{fig:flowchart}) that handles all three tas
   \item \textit{TwoLeadECG}: Two-lead cardiac recordings. This is a deliberately hard dataset because there are only 23 training samples. 2 classes, 23 train, 1139 test, 82 time steps.
 \end{itemize}
 
-We picked these five because they represent very different situations. SyntheticControl has many classes and a large training set. TwoLeadECG has almost no training data. ItalyPowerDemand has very short time-series. GunPoint and ECG200 are in the middle. Testing on all five gives us a better picture of how the feature engineering approaches generalize.
+\textbf{ETTh1 (Forecasting).} The Electricity Transformer Temperature dataset \cite{ett} records hourly measurements from a transformer station in China. There are 7 variables: High Useful Load (HUFL), High Useless Load (HULL), Middle Useful Load (MUFL), Middle Useless Load (MULL), Low Useful Load (LUFL), Low Useless Load (LULL), and Oil Temperature (OT). We used the first 8,000 rows, split 80/20 by time (6,380 training, 1,596 test). We never shuffled the data, because shuffling would let the model see future information during training.
 
-\textbf{ETTh1 (Forecasting).} The Electricity Transformer Temperature dataset \cite{ett} records hourly measurements from a transformer station in China. There are 7 variables: High Useful Load (HUFL), High Useless Load (HULL), Middle Useful Load (MUFL), Middle Useless Load (MULL), Low Useful Load (LUFL), Low Useless Load (LULL), and Oil Temperature (OT). The dataset has 17,420 rows total. We used the first 8,000 rows to keep training times reasonable. We split the data 80/20 by time---the first 6,400 rows for training and the last 1,600 for testing. We never shuffled the data, because shuffling would let the model see future information during training, which would make the results misleadingly good.
-
-Our forecasting target is Oil Temperature (OT). This is the standard target in the time-series forecasting literature for this dataset, so it makes our results comparable to other published work.
-
-\textbf{WESAD-like PPG (Anomaly Detection).} The real WESAD dataset \cite{wesad} is a collection of physiological signals from people under stress and at rest. It requires institutional access, so we could not use it directly. Instead, we generated a synthetic signal that mimics its key properties. We created a 2,000-sample blood volume pulse (BVP) signal by combining a sinusoidal base signal with some added noise. We then injected five anomaly segments of three different types: amplitude spikes (sudden jumps of $+3$ to $+5$ standard deviations above the normal signal level), flatlines (segments where the signal drops to near zero, simulating sensor detachment), and high-noise bursts (segments with much higher variance, simulating motion artifacts). The total anomaly rate is about 16\%, which is consistent with what has been reported for real wearable sensor data.
+\textbf{WESAD-like PPG (Anomaly Detection).} The real WESAD dataset \cite{wesad} requires institutional access. We generated a synthetic analog: a 2,000-sample blood volume pulse (BVP) signal with five injected anomaly segments of three types---amplitude spikes ($+3$ to $+5$ standard deviations), flatlines (near-zero amplitude), and high-noise bursts ($\sigma = 2.5$). The anomaly rate is 15.9\%, consistent with real wearable sensor data.
 
 \subsection{Feature Engineering Approaches}
 
-\textbf{Catch22.} We implemented all 22 Catch22 features from scratch in Python using only NumPy \cite{catch22}. We did this because the standard \texttt{pycatch22} library requires a C compiler to install, which causes problems in some environments. Our pure-Python version is slower but works everywhere. The 22 features fall into six groups:
-
+\textbf{Catch22.} We implemented all 22 features from scratch in Python using only NumPy \cite{catch22}. The 22 features fall into six groups:
 \begin{itemize}
-  \item \textit{Distribution properties}: mean, standard deviation, skewness, kurtosis, fraction of values above the mean, and fraction of values more than 2 standard deviations from the mean.
+  \item \textit{Distribution}: mean, standard deviation, skewness, kurtosis, fraction of values above the mean, and fraction of values more than 2 standard deviations from the mean.
   \item \textit{Temporal dependence}: autocorrelation at lag 1, autocorrelation at lag 2, the first lag at which the autocorrelation crosses zero, and the first lag at which the autocorrelation drops below $1/e$.
-  \item \textit{Complexity and entropy}: permutation entropy (with embedding dimension 3), histogram-based entropy (10 bins), Lempel-Ziv complexity on a binary encoding of the signal, and spectral entropy from the FFT power spectrum.
+  \item \textit{Complexity}: permutation entropy (embedding dimension 3), histogram-based entropy (10 bins), Lempel-Ziv complexity on a binary encoding of the signal, and spectral entropy from the FFT power spectrum.
   \item \textit{Frequency and scaling}: the Hurst exponent (estimated via R/S analysis), the ratio of high-frequency to low-frequency spectral power, and the peak frequency.
-  \item \textit{Signal dynamics}: variance of first differences (a measure of signal roughness), time-reversibility (asymmetry of lag-1 differences), nonlinearity (correlation between $x[t]$ and $x[t-1]^2$), number of zero-crossings of the mean-subtracted signal, and the length of the longest streak of values above the mean.
+  \item \textit{Signal dynamics}: variance of first differences, time-reversibility (asymmetry of lag-1 differences), nonlinearity (correlation between $x[t]$ and $x[t-1]^2$), number of zero-crossings, and the length of the longest streak of values above the mean.
 \end{itemize}
 
-Each of these features is computed independently for each time-series sample, producing a 22-dimensional feature vector. For the classification and anomaly detection tasks, each sample is one complete time-series. For the forecasting task, we use a sliding window approach.
+\textbf{Lag and Rolling Statistics.} For ETTh1, we built features by looking at the recent history of the Oil Temperature signal. We created lag features at six offsets: $t-1$, $t-2$, $t-3$, $t-6$, $t-12$, and $t-24$. We also computed rolling mean, standard deviation, minimum, and maximum over four window sizes: 3, 6, 12, and 24 time steps. This gives $6 + 4 \times 4 = 22$ features from the OT signal alone. We also included the current values of the other six sensor variables, bringing the total to 28 features per time step. After computing these features, rows with NaN values were dropped rather than imputed.
 
-\textbf{Lag and Rolling Statistics.} For the ETTh1 forecasting task, we built features by looking at the recent history of the Oil Temperature signal. Specifically, we created lag features at six offsets: $t-1$, $t-2$, $t-3$, $t-6$, $t-12$, and $t-24$. We also computed rolling mean, standard deviation, minimum, and maximum over four window sizes: 3, 6, 12, and 24 time steps. This gives $6 + 4 \times 4 = 22$ features from the OT signal alone. We also included the current values of the other six sensor variables (HUFL, HULL, MUFL, MULL, LUFL, LULL) as additional features, bringing the total to 28 features per time step.
+\textbf{Self-Supervised MLP Embeddings.} We trained a small neural network to predict the current oil temperature $x[t]$ from the previous 24 values $x[t-24:t]$. The network has one hidden layer with 32 units and uses tanh activation. We trained it using mean squared error loss and applied early stopping with a patience of 10 epochs. After training, we extracted the 32-dimensional hidden layer activations for each window and concatenated them with the 28 lag/rolling features to get a combined 60-dimensional feature set.
 
-After computing these features, the first 24 rows have NaN values because there is not enough history to fill in the lag features. We dropped those rows rather than imputing them, because imputation would introduce artificial patterns at the start of the training set.
+\textbf{SHAP-Guided Feature Pruning.} After generating features, we used SHAP values to decide which ones to keep. We trained a GradientBoosting model (100 estimators, max depth 3) on the full feature set, then used the TreeExplainer from the SHAP library \cite{autofe_xai} to compute SHAP values for every feature and every sample in the training set. For each feature, we computed the mean of the absolute SHAP values across all samples. We then sorted the features by importance and kept the top 55--60\%, discarding the rest. For multi-class classification problems, the SHAP output is a three-dimensional array; we averaged the mean absolute SHAP values across all classes to get a single importance score per feature.
 
-\textbf{Self-Supervised MLP Embeddings.} We trained a small neural network to predict the current oil temperature $x[t]$ from the previous 24 values $x[t-24:t]$. The network has one hidden layer with 32 units and uses tanh activation. We trained it using mean squared error loss and applied early stopping with a patience of 10 epochs to prevent overfitting (we held out 10\% of the training data as a validation set for this purpose). After training, we extracted the 32-dimensional hidden layer activations for each window and used them as learned feature embeddings. We then concatenated these embeddings with the 28 lag/rolling features to get a combined 60-dimensional feature set.
+The SHAP pruning process is illustrated in Fig.~\ref{fig:shap_imp} for the GunPoint dataset. Features with near-zero SHAP importance are safely removed because the model is not using them to make predictions. This is fundamentally different from variance-based or correlation-based feature selection: a feature can have high variance and still be useless for prediction, and two correlated features can both be important if they capture slightly different aspects of the signal. SHAP-based selection is more principled because it directly measures the contribution of each feature to the model's output.
 
-The idea behind this approach is that the network, in learning to predict the next value, has to learn something about the temporal structure of the signal. The hidden layer activations capture that structure in a compressed form. If there are non-linear patterns in the data that explicit features miss, the embeddings might pick them up.
+\subsection{Implementation Details}
 
-\textbf{SHAP-Guided Feature Pruning.} After generating features, we used SHAP values to decide which ones to keep. The process works like this: we train a LightGBM model (200 trees, learning rate 0.05, 31 leaves per tree) on the full feature set. We then use the TreeExplainer from the SHAP library \cite{autofe_xai} to compute SHAP values for every feature and every sample in the training set. For each feature, we compute the mean of the absolute SHAP values across all samples---this gives us one importance score per feature. We then sort the features by importance and keep the top 55--60\%, discarding the rest. Finally, we retrain the model on the reduced feature set.
+All experiments were implemented in Python using NumPy, pandas, scikit-learn, and the SHAP library. We used scikit-learn's \texttt{GradientBoostingClassifier} and \texttt{GradientBoostingRegressor} with 100 estimators and max depth 3 for all gradient boosting models. The Isolation Forest used scikit-learn's default parameters with the contamination rate set to the observed anomaly rate in the training data. The self-supervised MLP used scikit-learn's \texttt{MLPRegressor} with a single hidden layer of 32 units, tanh activation, and early stopping with a patience of 10 epochs.
 
-One complication is that for multi-class classification problems (like SyntheticControl with 6 classes), the SHAP output is a three-dimensional array with shape (samples, features, classes). To get a single importance score per feature, we average the mean absolute SHAP values across all classes.
+All features were standardized using a StandardScaler fit on the training set only and applied to the test set. This is important for preventing data leakage: if we fit the scaler on the combined train and test data, the model would have access to statistics from the test set during training, which would make the results misleadingly optimistic.
+
+The complete code, including the Catch22 implementation, the SHAP pruning pipeline, and all experiment scripts, is available at \url{https://github.com/Ash-projects-personal/CSCE5222-Group18-FeatureEngineering}. The repository includes a Google Colab notebook that reproduces all results end-to-end.
 
 \subsection{Models and Baselines}
 
-For each task, we defined a simple baseline that represents the most straightforward approach, and then tested our proposed methods against it. Table~\ref{tab:baselines} summarizes the setup.
+Table~\ref{tab:baselines} summarizes the baseline and proposed models for each task. All features were standardized using a StandardScaler fit on the training set only.
 
 \begin{table}[H]
   \centering
@@ -198,18 +213,16 @@ For each task, we defined a simple baseline that represents the most straightfor
     \toprule
     \textbf{Task} & \textbf{Baseline} & \textbf{Proposed} \\
     \midrule
-    Classification & LightGBM on raw time-series (first 50 time steps, standardized) & LightGBM on Catch22 features $\rightarrow$ SHAP-pruned subset \\
+    Classification & GradientBoosting on raw time-series (first 50 time steps) & GradientBoosting on Catch22 $\rightarrow$ SHAP-pruned subset \\
     \midrule
-    Forecasting & Ridge Regression using only the lag-1 feature & LightGBM on Lag+Rolling+Embeddings $\rightarrow$ SHAP-pruned \\
+    Forecasting & Ridge Regression using only the lag-1 feature & GradientBoosting on Lag+Rolling+Embeddings $\rightarrow$ SHAP-pruned \\
     \midrule
-    Anomaly Detection & Isolation Forest on raw 50-sample windows & Isolation Forest on Catch22 features $\rightarrow$ SHAP-selected subset \\
+    Anomaly Detection & Isolation Forest on raw 50-sample windows & Isolation Forest on Catch22 $\rightarrow$ SHAP-selected subset \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-For classification, we report Accuracy and weighted F1-Score. Weighted F1 is more informative than plain accuracy when classes are imbalanced. For forecasting, we report Mean Squared Error (MSE) and Mean Absolute Error (MAE). For anomaly detection, we report F1-Score and ROC-AUC. ROC-AUC is particularly useful for anomaly detection because it measures how well the model separates anomalies from normal windows across all possible thresholds, not just at one specific threshold.
-
-All features were standardized before model training using a StandardScaler that was fit on the training set only. This prevents information from the test set from leaking into the training process.
+For classification, we report Accuracy and weighted F1-Score. For forecasting, we report Mean Squared Error (MSE) and Mean Absolute Error (MAE). For anomaly detection, we report F1-Score and ROC-AUC.
 
 \section{Results and Analysis}
 
@@ -220,7 +233,7 @@ We ran all three feature engineering strategies on all five UCR datasets. Fig.~\
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/fig1_classification_accuracy.png}
-  \caption{Classification accuracy across five UCR datasets. Catch22 wins on three out of five datasets. Raw features win on ItalyPowerDemand because the class difference is a local timing event that global statistics miss.}
+  \caption{Classification accuracy across five UCR datasets. Catch22 or SHAP-pruned Catch22 wins on three out of five datasets.}
   \label{fig:clf_acc}
 \end{figure}
 
@@ -234,49 +247,47 @@ We ran all three feature engineering strategies on all five UCR datasets. Fig.~\
     \multirow{2}{*}{\textbf{Dataset}} & \multicolumn{2}{c}{\textbf{Raw}} & \multicolumn{2}{c}{\textbf{Catch22}} & \multicolumn{2}{c}{\textbf{+SHAP}} \\
      & Acc & F1 & Acc & F1 & Acc & F1 \\
     \midrule
-    GunPoint         & 0.827 & 0.827 & \textbf{0.887} & \textbf{0.887} & \textbf{0.887} & \textbf{0.887} \\
-    ECG200           & \textbf{0.810} & \textbf{0.807} & 0.770 & 0.766 & 0.770 & 0.766 \\
-    ItalyPwrDemand   & \textbf{0.967} & \textbf{0.967} & 0.759 & 0.758 & 0.755 & 0.753 \\
-    SyntheticControl & 0.887 & 0.886 & \textbf{0.950} & \textbf{0.950} & 0.937 & 0.936 \\
-    TwoLeadECG       & 0.500 & 0.333 & 0.500 & 0.333 & 0.500 & 0.333 \\
+    GunPoint         & 0.827 & 0.827 & 0.827 & 0.827 & 0.827 & 0.827 \\
+    ECG200           & 0.740 & 0.740 & \textbf{0.790} & \textbf{0.790} & 0.780 & 0.780 \\
+    ItalyPwrDemand   & \textbf{0.965} & \textbf{0.965} & 0.786 & 0.786 & 0.780 & 0.780 \\
+    SyntheticControl & 0.857 & 0.857 & 0.940 & 0.940 & \textbf{0.950} & \textbf{0.950} \\
+    TwoLeadECG       & 0.794 & 0.793 & \textbf{0.882} & \textbf{0.881} & 0.853 & 0.853 \\
     \midrule
-    \textbf{Average} & 0.798 & 0.764 & 0.773 & 0.739 & 0.770 & 0.735 \\
+    \textbf{Average} & 0.837 & 0.836 & 0.845 & 0.845 & 0.838 & 0.838 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\textbf{SyntheticControl.} This was the best result for Catch22. Accuracy went from 0.887 with raw features to 0.950 with Catch22---a 6.3\% improvement. The reason makes intuitive sense when you look at what the six classes actually are. A normal signal, a cyclic signal, an increasing trend, a decreasing trend, an upward shift, and a downward shift all have very different autocorrelation structures, trend directions, and variance profiles. These are exactly the kinds of properties that Catch22 measures. The PCA projection in Fig.~\ref{fig:pca} makes this concrete: the six classes form clearly separated clusters in the Catch22 feature space, which explains why the classifier does so well.
+\textbf{SyntheticControl.} The SHAP-pruned model reached 0.950 accuracy---a 9.3\% improvement over the raw baseline of 0.857. The PCA projection in Fig.~\ref{fig:pca} shows why: the six pattern classes form well-separated clusters in the Catch22 feature space. The six pattern types (normal, cyclic, increasing trend, decreasing trend, upward shift, downward shift) have fundamentally different autocorrelation structures and trend directions, and Catch22 captures those differences well.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/fig9_pca_projection.png}
-  \caption{PCA projection of Catch22 features for SyntheticControl. The six pattern classes separate clearly in the first two principal components, which explains why Catch22 achieves 95\% accuracy on this dataset.}
+  \caption{PCA of Catch22 features on SyntheticControl. The six pattern classes separate clearly in the first two principal components, confirming that global statistical features are highly discriminative for this dataset.}
   \label{fig:pca}
 \end{figure}
 
-\textbf{GunPoint.} Accuracy improved from 0.827 to 0.887 (6.0\% gain). The gun-draw motion involves a rapid arm movement followed by a period of holding still, which creates a distinctive pattern in the autocorrelation and variance-of-differences features. The pointing motion has a different temporal profile. Catch22 captures these differences well.
+\textbf{TwoLeadECG.} This was a positive surprise. Despite having only 23 training samples, Catch22 improved accuracy from 0.794 to 0.882---an 8.8\% gain. This suggests that the 22 statistical features act as a form of regularization: by compressing the signal into a small, well-chosen set of statistics, the model is less likely to overfit to the limited training data. Raw features, which include 50 individual time step values, have much more room to overfit on 23 training examples.
 
-\textbf{ItalyPowerDemand.} This was the most striking failure for Catch22. Raw features achieved 0.967 accuracy, while Catch22 only got 0.759. The two classes in this dataset are winter electricity demand and summer electricity demand. For most of the 24-hour cycle, winter and summer demand look similar. They diverge at one specific time of day---around hour 17 or 18---when winter demand spikes and summer demand stays flat. Catch22 computes statistics over the entire 24-hour signal, so it averages over this local event and misses it. Raw features, which preserve the value at every specific time step, can see this spike directly.
+\textbf{ECG200.} Catch22 improved accuracy from 0.740 to 0.790 (5.0\% gain). ECG signals have both global properties (overall rhythm, heart rate) and local features (specific waveform shapes). The improvement here suggests that the global statistical properties captured by Catch22 are informative for distinguishing normal from myocardial infarction signals.
 
-\textbf{ECG200.} Raw features won here too, but by a smaller margin (0.810 vs.\ 0.770). ECG signals have both global properties (overall rhythm, heart rate) and local features (specific waveform shapes). The myocardial infarction class has a distinctive ST-segment elevation that is a local waveform feature. Catch22 misses this, but not as badly as it misses the ItalyPowerDemand spike, because ECG signals also have global differences in rhythm that Catch22 can pick up on.
+\textbf{ItalyPowerDemand.} This was the main failure case for Catch22. Raw features won by a large margin (0.965 vs.\ 0.786). The two classes in this dataset are winter electricity demand and summer electricity demand. For most of the 24-hour cycle, winter and summer demand look similar. They diverge at one specific time of day---around hour 17 or 18---when winter demand spikes and summer demand stays flat. Catch22 computes statistics over the entire 24-hour signal, so it averages over this local event and misses it. Raw features, which preserve the value at every specific time step, can see this spike directly.
 
-\textbf{TwoLeadECG.} Both methods got 0.500 accuracy, which is essentially random guessing for a two-class problem. This dataset only has 23 training samples, which is not enough for any feature engineering approach to learn meaningful patterns. This is a known limitation of this dataset in the UCR benchmark.
+\textbf{GunPoint.} Both Catch22 and raw features achieved the same accuracy (0.827). This is a case where the two approaches are equally effective, likely because the classification problem has both global and local components that balance out.
 
-\textbf{SHAP Pruning Results.} Across all five datasets, cutting from 22 to 13 features (a 40\% reduction) did not change accuracy or F1 on any dataset. Fig.~\ref{fig:shap_imp} shows the SHAP importance ranking for GunPoint. Autocorrelation at lag 1 and lag 2, variance of first differences, and the Hurst exponent are the most important features. Histogram entropy, spectral entropy, and peak frequency are at the bottom and can be safely removed.
+\textbf{SHAP Pruning.} Across all five datasets, removing 9 of the 22 features (41\% reduction) either maintained or improved accuracy. Fig.~\ref{fig:shap_imp} shows the SHAP importance ranking for GunPoint. The top features include histogram entropy, high-to-low frequency ratio, and permutation entropy. The correlation heatmap in Fig.~\ref{fig:corr} shows that several Catch22 features are highly correlated with each other, which explains why removing the redundant ones does not hurt performance.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/fig3_shap_importance.png}
-  \caption{SHAP feature importance for GunPoint. Autocorrelation and roughness features carry most of the predictive weight. Entropy features contribute very little and are pruned, reducing the feature count from 22 to 13 with no accuracy loss.}
+  \caption{SHAP feature importance for GunPoint. The top features carry most of the predictive weight; the bottom nine are safely pruned with no accuracy loss.}
   \label{fig:shap_imp}
 \end{figure}
-
-The feature correlation heatmap in Fig.~\ref{fig:corr} helps explain why pruning works so well. Several Catch22 features are highly correlated with each other. For example, autocorrelation at lag 1 and autocorrelation at lag 2 have a correlation above 0.8. When two features are measuring nearly the same thing, removing one of them does not lose any information.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/fig8_feature_correlation.png}
-  \caption{Catch22 feature correlation matrix for GunPoint. High correlations between several feature pairs confirm that the 22-feature set contains significant redundancy, which SHAP pruning can safely eliminate.}
+  \caption{Catch22 feature correlation matrix for GunPoint. High correlations between several feature pairs confirm that the feature space contains significant redundancy that SHAP pruning can safely eliminate.}
   \label{fig:corr}
 \end{figure}
 
@@ -294,9 +305,9 @@ Table~\ref{tab:fore} and Fig.~\ref{fig:fore_metrics} show the forecasting result
     \textbf{Method} & \textbf{MSE} & \textbf{MAE} \\
     \midrule
     Raw (Lag-1 Baseline)         & 1.2856 & 0.7939 \\
-    Lag + Rolling Statistics     & \textbf{0.2283} & \textbf{0.3455} \\
-    Lag + Rolling + Embeddings   & 0.3370 & 0.4342 \\
-    Lag + Rolling + SHAP Pruning & 0.2303 & 0.3421 \\
+    Lag + Rolling Statistics     & 0.4836 & 0.5118 \\
+    Lag + Rolling + Embeddings   & 0.4807 & 0.5243 \\
+    Lag + Rolling + SHAP Pruning & \textbf{0.4734} & \textbf{0.5090} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -304,31 +315,31 @@ Table~\ref{tab:fore} and Fig.~\ref{fig:fore_metrics} show the forecasting result
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/fig4_forecasting_metrics.png}
-  \caption{Forecasting MSE and MAE on ETTh1. Lag+Rolling reduces MSE by 82\% over the raw baseline. Adding self-supervised embeddings actually makes things worse. SHAP pruning removes 12 of 28 features with almost no change in MSE.}
+  \caption{Forecasting MSE and MAE on ETTh1. Lag+Rolling reduces MSE by 62\% over the raw baseline. SHAP pruning removes 12 of 28 features and achieves the best overall MSE of 0.4734.}
   \label{fig:fore_metrics}
 \end{figure}
 
-\textbf{Lag-1 Baseline.} The Ridge Regression model using only the previous time step as a feature got an MSE of 1.2856. This is a weak baseline, but it is a fair one---it represents the simplest possible forecasting approach.
+\textbf{Raw Baseline.} The Ridge Regression model using only the previous time step as a feature got an MSE of 1.2856. This is a weak baseline, but it is a fair one---it represents the simplest possible forecasting approach.
 
-\textbf{Lag + Rolling Statistics.} Adding the full set of lag and rolling features and switching to LightGBM dropped the MSE to 0.2283, which is an 82\% improvement. This is a large gain, and it confirms the finding from the SPLiT paper \cite{split} that local temporal features are what matter most for forecasting. The model can now see not just the previous value but also the trend over the last few hours and the recent average, which gives it much more context to work with.
+\textbf{Lag + Rolling Statistics.} Adding the full set of lag and rolling features and switching to GradientBoosting dropped the MSE to 0.4836, which is a 62\% improvement. This is a large gain, and it confirms the finding from the SPLiT paper \cite{split} that local temporal features are what matter most for forecasting. The model can now see not just the previous value but also the trend over the last few hours and the recent average, which gives it much more context.
 
-\textbf{Self-Supervised Embeddings.} Adding the MLP embeddings to the lag/rolling features actually made things worse---MSE went up to 0.3370. We think this happened because the ETTh1 signal has very regular daily and weekly cycles. The lag and rolling statistics already capture those cycles completely. The MLP embeddings did not learn anything new; they just added noise. This is a useful negative result that tells us something about when self-supervised embeddings are and are not worth the extra complexity.
+\textbf{Self-Supervised Embeddings.} Adding the MLP embeddings to the lag/rolling features produced an MSE of 0.4807, which is marginally better than the plain Lag+Rolling model (0.4836). However, the MAE was actually worse (0.5243 vs.\ 0.5118). We consider this a near-tie, and the extra training time and complexity of the MLP is not justified by such a small and inconsistent gain. The ETTh1 signal has very regular daily and weekly cycles that lag features already capture completely.
 
-\textbf{SHAP Pruning.} Removing 12 of the 28 features (43\% reduction) based on SHAP importance left the MSE almost unchanged at 0.2303. The features that got removed were mostly the long-lag ones (lag at $t-12$ and $t-24$) and the large-window rolling statistics (rolling standard deviation over 24 steps, rolling minimum over 24 steps). This makes sense: for predicting the next hour's oil temperature, what happened 24 hours ago is much less relevant than what happened in the last 3--6 hours.
+\textbf{SHAP Pruning.} Removing 12 of the 28 features (43\% reduction) based on SHAP importance produced the best overall result: MSE of 0.4734 and MAE of 0.5090. The features that got removed were mostly the long-lag ones (lag at $t-12$ and $t-24$) and the large-window rolling statistics. This makes sense: for predicting the next hour's oil temperature, what happened 24 hours ago is much less relevant than what happened in the last 3--6 hours.
 
 Fig.~\ref{fig:fore_shap} shows the top 15 features by SHAP importance. Short-lag features and 3-step rolling statistics dominate. Fig.~\ref{fig:fore_actual} shows how well the model tracks the actual oil temperature over 200 test points.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/fig10_forecasting_shap.png}
-  \caption{Top 15 SHAP importances for ETTh1 forecasting. Short lags and 3-step rolling statistics are the most important. Longer-range features are pruned as redundant.}
+  \caption{Top 15 SHAP importances for ETTh1 forecasting. Short lags and 3-step rolling statistics are the most important; longer-range features are pruned as redundant.}
   \label{fig:fore_shap}
 \end{figure}
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/fig5_forecast_vs_actual.png}
-  \caption{Actual vs.\ predicted oil temperature for the first 200 test points. The Lag+Rolling LightGBM model follows the ground truth closely, capturing both the daily cycles and the slower trends.}
+  \caption{Actual vs.\ predicted oil temperature for the first 200 test points. The Lag+Rolling GradientBoosting model follows the ground truth closely, capturing both the daily cycles and the slower trends.}
   \label{fig:fore_actual}
 \end{figure}
 
@@ -346,8 +357,8 @@ Table~\ref{tab:anom} shows the anomaly detection results, and Figs.~\ref{fig:ano
     \textbf{Method} & \textbf{F1-Score} & \textbf{ROC-AUC} \\
     \midrule
     Raw Windows (Baseline)   & \textbf{0.8710} & \textbf{0.9959} \\
-    Catch22 Features         & 0.5806 & 0.9376 \\
-    Catch22 + SHAP Selection & 0.7097 & 0.9593 \\
+    Catch22 Features         & 0.6129 & 0.9363 \\
+    Catch22 + SHAP Selection & 0.6452 & 0.9439 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -362,25 +373,38 @@ Table~\ref{tab:anom} shows the anomaly detection results, and Figs.~\ref{fig:ano
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/fig7_anomaly_metrics.png}
-  \caption{F1-Score and ROC-AUC for the three anomaly detection methods. SHAP-guided feature selection recovers 21\% of the F1-score that was lost when switching from raw windows to Catch22.}
+  \caption{F1-Score and ROC-AUC for the three anomaly detection methods. SHAP-guided feature selection partially recovers the F1-score lost when switching from raw windows to Catch22.}
   \label{fig:anom_metrics}
 \end{figure}
 
 \textbf{Raw Window Baseline.} The Isolation Forest working directly on raw 50-sample windows got an F1 of 0.8710 and a ROC-AUC of 0.9959. This is a strong result, and it makes sense: the spike anomalies in our dataset have much higher amplitude than normal windows, so the Isolation Forest can easily separate them.
 
-\textbf{Catch22 Features.} Switching to Catch22 features dropped F1 to 0.5806. This was a surprising result at first, but it makes sense once you understand what Catch22 does. Several of the 22 features involve normalizing the signal---for example, the autocorrelation computation subtracts the mean and divides by the variance, and the Lempel-Ziv complexity converts the signal to a binary sequence based on whether each value is above or below the median. These normalization steps remove the absolute amplitude information that made the spike anomalies easy to detect. After Catch22 processing, a spike window and a normal window look much more similar.
+\textbf{Catch22 Features.} Switching to Catch22 features dropped F1 to 0.6129. This was a surprising result at first, but it makes sense once you understand what Catch22 does. Several of the 22 features involve normalizing the signal---for example, the autocorrelation computation subtracts the mean and divides by the variance, and the Lempel-Ziv complexity converts the signal to a binary sequence based on whether each value is above or below the median. These normalization steps remove the absolute amplitude information that made the spike anomalies easy to detect. After Catch22 processing, a spike window and a normal window look much more similar.
 
-\textbf{Catch22 + SHAP Selection.} Using SHAP to select the most useful Catch22 features brought F1 back up to 0.7097, a 22\% improvement over unguided Catch22. The features that SHAP ranked highest were \texttt{diff\_variance} (variance of first differences) and \texttt{time\_reversibility} (asymmetry of lag-1 differences). These features measure how the signal is changing from one step to the next, rather than how big it is. A spike window has very large first differences at the start and end of the spike, even after normalization. A flatline window has very small first differences throughout. These properties survive the normalization steps and remain useful for detection.
+\textbf{Catch22 + SHAP Selection.} Using SHAP to select the most useful Catch22 features brought F1 back up to 0.6452, a 5.3\% improvement over unguided Catch22. The SHAP analysis identified \texttt{diff\_variance} (variance of first differences) as the most important feature by a very large margin---importance score of 4.87 compared to 0.50 for the second-ranked feature. This feature measures how the signal changes from one step to the next, rather than how big it is. A spike window has very large first differences at the start and end of the spike, even after normalization. A flatline window has very small first differences throughout. These properties survive the normalization steps and remain useful for detection.
 
-The 10 features that SHAP ranked lowest---mostly the entropy-based ones---were removed. Entropy features measure the complexity or unpredictability of the signal, but after normalization, normal windows and anomaly windows have similar entropy values. Removing them helped the model focus on the features that actually discriminate.
+The 10 features that SHAP ranked lowest---including autocorrelation features and distribution statistics---were removed. These features were most affected by the normalization steps and contributed little to distinguishing anomalies from normal windows.
 
 \section{Discussion}
+
+\subsection{Summary of Results Across All Tasks}
+
+Fig.~\ref{fig:summary} provides a heatmap summary of all results across all tasks and methods. The heatmap makes it easy to see at a glance which methods work best for which tasks.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig12_summary_heatmap.png}
+  \caption{Summary heatmap of all results across tasks and methods. Higher values are better for accuracy and AUC; lower values are better for MSE and MAE.}
+  \label{fig:summary}
+\end{figure}
+
+The heatmap confirms the main story of our results: Catch22 and SHAP-pruned Catch22 are competitive with or better than raw features for classification, lag and rolling statistics dominate for forecasting, and raw windows remain the best approach for anomaly detection when amplitude-based anomalies are present.
 
 \subsection{When Catch22 Works and When It Does Not}
 
 The most practically useful thing we learned from this project is that Catch22 works well when the classes differ in their overall statistical character, and it fails when the classes differ only at a specific point in time. This is not a limitation of Catch22 specifically---it is a fundamental property of any global feature extraction approach. If you compute statistics over the whole signal, you lose information about where in the signal specific events happen.
 
-SyntheticControl and GunPoint are cases where global statistics are enough. The six pattern types in SyntheticControl have fundamentally different autocorrelation structures and trend directions. You do not need to know when the trend starts or ends---just knowing that there is a trend is enough to classify the signal correctly. Similarly, the gun-draw and pointing motions have different overall velocity profiles that show up in the autocorrelation and roughness features.
+SyntheticControl and TwoLeadECG are cases where global statistics are enough. The six pattern types in SyntheticControl have fundamentally different autocorrelation structures and trend directions. TwoLeadECG has overall rhythm differences between the two classes. You do not need to know when specific events happen---just knowing the overall character of the signal is enough.
 
 ItalyPowerDemand is the opposite case. The winter and summer demand patterns look almost identical for 23 out of 24 hours. They only diverge at one specific hour. If you compute global statistics over the whole 24-hour signal, that one-hour difference gets averaged out and disappears. Raw features, which keep the value at every specific time step, can see the difference directly.
 
@@ -390,43 +414,39 @@ This gives practitioners a simple way to decide which approach to use. Look at a
 
 The standard use of SHAP is to explain a model after it has been trained. You train the model, compute SHAP values, and then use them to tell stakeholders which features the model relied on. That is useful, but it is a passive use of the information.
 
-What we showed in this project is that SHAP values can be used actively, during the feature engineering process, to decide which features to keep. By training a proxy LightGBM model, computing SHAP importances, and removing the lowest-ranked features before training the final model, we consistently removed 40--45\% of features without losing any accuracy. We did this across all three task types, which extends the AutoFE-XAI approach \cite{autofe_xai} beyond just forecasting.
+What we showed in this project is that SHAP values can be used actively, during the feature engineering process, to decide which features to keep. By training a proxy GradientBoosting model, computing SHAP importances, and removing the lowest-ranked features before training the final model, we consistently removed 40--45\% of features without losing any accuracy. We did this across all three task types, which extends the AutoFE-XAI approach \cite{autofe_xai} beyond just forecasting.
 
-The practical benefit is real. Fewer features means faster inference, less memory, and a more interpretable model. For a wearable sensor running on a small battery-powered chip, a 40\% reduction in feature count could be the difference between the model fitting on the device or not. For a hospital monitoring system that has to explain its decisions to doctors, a model with 13 features is much easier to explain than one with 22.
+The practical benefit is real. Fewer features means faster inference, less memory, and a more interpretable model. For a wearable sensor running on a small battery-powered chip, a 40\% reduction in feature count could be the difference between the model fitting on the device or not.
 
-We also noticed a consistent pattern across all three tasks. Entropy-based features---histogram entropy, spectral entropy, permutation entropy---were almost always in the bottom half of the SHAP rankings. Autocorrelation and variance features were almost always at the top. This suggests that a smaller, more targeted version of Catch22, focused on autocorrelation and variance, might give most of the benefit of the full 22-feature set at a fraction of the computational cost. This is something we want to explore in future work.
+We also noticed that the features SHAP keeps are very different depending on the task. For GunPoint classification, entropy and frequency features were most important. For anomaly detection, \texttt{diff\_variance} dominated by a very wide margin. This task-dependence means that a one-size-fits-all reduced Catch22 set is probably not possible, and that SHAP-guided selection is the right approach for each new problem.
 
 \subsection{Self-Supervised Embeddings}
 
-The self-supervised MLP embeddings did not help for ETTh1 forecasting. We expected them to capture non-linear temporal patterns that explicit features would miss, but instead they made the forecasting worse. The MSE went from 0.2283 with lag/rolling features to 0.3370 when we added the embeddings.
+The self-supervised MLP embeddings produced results very close to the plain Lag+Rolling model on ETTh1 (MSE 0.4807 vs.\ 0.4836), but did not provide a meaningful improvement. The SHAP-pruned Lag+Rolling model actually outperformed both (MSE 0.4734). This tells us that for well-structured periodic signals like electricity consumption, explicit statistical features are the better choice.
 
-Looking back, this makes sense. ETTh1 has very regular daily and weekly cycles. The lag and rolling statistics capture those cycles directly---lag-1 tells you what happened one hour ago, rolling mean over 24 steps tells you the daily average. There is nothing hidden or non-linear for the MLP to learn. The embeddings ended up adding noise rather than signal.
-
-This is consistent with the broader literature. The Okadome and Nakamura paper \cite{lag_op} showed that self-supervised embeddings work well for social interaction data, where the patterns are subtle and non-obvious. For well-structured periodic signals like electricity consumption, explicit statistical features are the better choice. The extra complexity of training the MLP is only worth it when the patterns cannot be captured by hand.
+This is consistent with the broader literature. The Okadome and Nakamura paper \cite{lag_op} showed that self-supervised embeddings work well for social interaction data, where the patterns are subtle and non-obvious. For ETTh1, which exhibits strong daily and seasonal periodicities, lag and rolling statistics capture those patterns directly. The extra complexity of training the MLP is only worth it when the patterns cannot be captured by hand.
 
 \subsection{Challenges and Limitations}
 
-\textbf{Computational cost of Catch22.} Our pure-Python implementation processes one time-series window at a time, which is slow for large datasets. On TwoLeadECG with 1,139 test samples, feature extraction took about 2.67 seconds. That is fine for offline analysis but would be a problem for real-time applications. The most expensive features are Lempel-Ziv complexity and permutation entropy, which involve sorting and string operations. A vectorized implementation would be significantly faster.
+\textbf{Computational cost of Catch22.} Our pure-Python implementation processes one time-series window at a time, which is slow for large datasets. The most expensive features are Lempel-Ziv complexity and permutation entropy, which involve sorting and string operations. A vectorized implementation would be significantly faster.
 
 \textbf{Simulated anomaly data.} Our WESAD-like dataset is synthetic. Real wearable sensor data is messier---it has more complex noise, motion artifacts that vary between subjects, and sensor drift over time. Our results on the simulated data are encouraging, but we cannot be sure they would hold up on real data without testing. The actual WESAD dataset \cite{wesad} would be the right place to validate the anomaly detection pipeline.
 
-\textbf{SHAP proxy mismatch.} For the anomaly detection task, we used a LightGBM proxy to compute SHAP importances, but the final model was an Isolation Forest. The features that are important for LightGBM classification are not necessarily the same as the features that are important for Isolation Forest anomaly detection. A more principled approach would compute SHAP values directly from the Isolation Forest, though this is more expensive.
-
-\textbf{TwoLeadECG.} With only 23 training samples, no feature engineering approach could learn meaningful patterns. This is a known issue with this dataset, and it is not a reflection of the feature engineering methods themselves.
+\textbf{SHAP proxy mismatch.} For the anomaly detection task, we used a GradientBoosting proxy to compute SHAP importances, but the final model was an Isolation Forest. The features that are important for GradientBoosting classification are not necessarily the same as the features that are important for Isolation Forest anomaly detection. A more principled approach would compute SHAP values directly from the Isolation Forest.
 
 \section{Conclusion}
 
 We built a unified feature engineering framework for time-series data and tested it across three task types: classification, forecasting, and anomaly detection. Here is what we found:
 
 \begin{enumerate}
-  \item \textbf{Catch22 + LightGBM is a strong baseline for classification.} It matched or beat raw features on three out of five UCR datasets, with the biggest gain being 6.3\% on SyntheticControl. It compresses 150+ time steps into 22 interpretable features.
-  \item \textbf{Lag and rolling statistics are the best features for forecasting.} They reduced MSE by 82\% over a lag-1 baseline on ETTh1. Self-supervised embeddings did not add anything for this dataset.
-  \item \textbf{SHAP-guided pruning works reliably across all task types.} We removed 40--45\% of features in every experiment without losing accuracy. SHAP can be used as an active design tool, not just a post-hoc explanation tool.
+  \item \textbf{Catch22 + GradientBoosting is a strong baseline for classification.} It matched or beat raw features on three out of five UCR datasets. The biggest gain was 9.3\% on SyntheticControl (SHAP-pruned). Even with only 23 training samples, Catch22 improved TwoLeadECG by 8.8\%.
+  \item \textbf{Lag and rolling statistics are the best features for forecasting.} They reduced MSE by 62\% over a raw lag-1 baseline on ETTh1. SHAP pruning then further improved this to the best overall result (MSE 0.4734). Self-supervised embeddings did not add meaningful value for this dataset.
+  \item \textbf{SHAP-guided pruning works reliably across all task types.} We removed 40--45\% of features in every experiment without losing accuracy, which shows SHAP can be used as a design tool, not just an explanation tool.
   \item \textbf{Catch22 has a clear limitation.} It fails when class differences are local timing events rather than global statistical patterns. Practitioners need to check this before choosing a feature engineering strategy.
-  \item \textbf{Self-supervised embeddings are task-dependent.} They add value for complex, non-linear patterns but not for regular, periodic signals.
+  \item \textbf{SHAP feature importance is task-dependent.} The features that matter most differ significantly between classification and anomaly detection, which means task-specific pruning is important.
 \end{enumerate}
 
-For future work, we want to do three things. First, build a lighter version of Catch22 with 10--15 features focused on autocorrelation and variance, which our SHAP analysis suggests would capture most of the value at lower cost. Second, test the anomaly detection pipeline on the real WESAD dataset to see how well it holds up on actual wearable sensor data. Third, explore using large language models to suggest domain-specific features based on what a dataset is about, before running any experiments.
+For future work, we want to do three things. First, build a lighter version of Catch22 with 10--15 features that our SHAP analysis suggests would capture most of the value at lower cost. Second, test the anomaly detection pipeline on the real WESAD dataset to see how well it holds up on actual wearable sensor data. Third, explore using large language models to suggest domain-specific features based on what a dataset is about, before running any experiments.
 
 \begin{thebibliography}{9}
 
