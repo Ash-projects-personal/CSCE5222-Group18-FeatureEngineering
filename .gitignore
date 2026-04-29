@@ -12,3 +12,12 @@ data/ETTh1.csv
 *.synctex.gz
 report/*.aux
 report/*.log
+code/Code_README.md
+code/Code_README.pdf
+code/Group18_Code_Final.pdf
+slides/Presentation_README.md
+slides/Presentation_README.pdf
+slides/Group18_Presentation_Final.pdf
+code/merge_all.py
+code/Colab_README.md
+code/Colab_README.pdf
